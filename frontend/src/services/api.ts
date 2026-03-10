@@ -30,3 +30,62 @@ export async function apiRequest<T>(
 }
 
 export { API_BASE }
+
+// Categories
+export async function getCategories() {
+  return apiRequest<import('@/types').Category[]>('/categories')
+}
+export async function createCategory(data: { name: string; color?: string; icon?: string }) {
+  return apiRequest<import('@/types').Category>('/categories', {
+    method: 'POST',
+    body: JSON.stringify({ ...data, color: data.color ?? '#6B7280', icon: data.icon ?? '' }),
+  })
+}
+export async function updateCategory(id: number, data: Partial<{ name: string; color: string; icon: string }>) {
+  return apiRequest<import('@/types').Category>(`/categories/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+export async function deleteCategory(id: number) {
+  return apiRequest<void>(`/categories/${id}`, { method: 'DELETE' })
+}
+
+// Transactions
+export async function getTransactions() {
+  return apiRequest<import('@/types').Transaction[]>('/transactions')
+}
+export async function createTransaction(data: {
+  description: string
+  amount: number
+  type: 'receita' | 'despesa'
+  date: string
+  category_id?: number | null
+  is_paid?: boolean
+  is_recurring?: boolean
+}) {
+  return apiRequest<import('@/types').Transaction>('/transactions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+export async function updateTransaction(
+  id: number,
+  data: Partial<{
+    description: string
+    amount: number
+    type: 'receita' | 'despesa'
+    date: string
+    category_id: number | null
+    is_paid: boolean
+    is_recurring: boolean
+  }>
+) {
+  return apiRequest<import('@/types').Transaction>(`/transactions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+export async function deleteTransaction(id: number) {
+  return apiRequest<void>(`/transactions/${id}`, { method: 'DELETE' })
+}
