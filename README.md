@@ -35,4 +35,4 @@ App em http://localhost:5173
 
 ### Banco de dados
 
-O projeto assume um banco PostgreSQL chamado `finance_manager`. A string de conexão (usuário, senha, host, porta) é configurada em `DATABASE_URL` no `.env` do backend.
+O projeto assume um banco PostgreSQL chamado `finance_manager`. A string de conexão é definida em `DATABASE_URL` no `.env` do backend. Migrações: `alembic upgrade head` (a partir da pasta `backend`).

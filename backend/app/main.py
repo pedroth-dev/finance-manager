@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import check_db_connection
+from app.routers import auth
 
 app = FastAPI(title="Finance Manager API", version="1.0.0")
+app.include_router(auth.router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,2 +1,11 @@
-// Types for the app - will add Usuario, Transacao, Categoria in Etapa 3
-export type { }
+export interface User {
+  id: number
+  name: string
+  email: string
+  created_at: string
+}
+
+export interface Token {
+  access_token: string
+  token_type: string
+}
