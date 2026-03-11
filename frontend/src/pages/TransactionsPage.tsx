@@ -7,15 +7,27 @@ import {
   getCategories,
 } from '@/services/api'
 import type { Transaction, Category } from '@/types'
-import { Button } from '@/components/ui/button'
+import EmojiPicker from '@/components/EmojiPicker'
+import CustomSelect from '@/components/CustomSelect'
+import DatePicker from '@/components/DatePicker'
 
 const today = new Date().toISOString().slice(0, 10)
+
+type FilterType = 'all' | 'receita' | 'despesa'
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Transaction | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [filter, setFilter] = useState<FilterType>('all')
+  const [catFilter, setCatFilter] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -23,6 +35,7 @@ export default function TransactionsPage() {
     date: today,
     category_id: null as number | null,
     is_paid: true,
+    icon: '🛒',
   })
 
   function load() {
@@ -35,23 +48,20 @@ export default function TransactionsPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
+
+  function resetForm() {
+    setEditing(null)
+    setForm({ description: '', amount: '', type: 'despesa', date: today, category_id: null, is_paid: true, icon: '🛒' })
+  }
 
   function openCreate() {
-    setEditing(null)
-    setForm({
-      description: '',
-      amount: '',
-      type: 'despesa',
-      date: today,
-      category_id: null,
-      is_paid: true,
-    })
+    resetForm()
+    setModalOpen(true)
   }
 
   function openEdit(t: Transaction) {
+    const cat = t.category_id ? catMap.get(t.category_id) : null
     setEditing(t)
     setForm({
       description: t.description,
@@ -60,7 +70,14 @@ export default function TransactionsPage() {
       date: t.date.slice(0, 10),
       category_id: t.category_id,
       is_paid: t.is_paid,
+      icon: cat?.icon || (t.type === 'receita' ? '💵' : '🛒'),
     })
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    resetForm()
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -75,18 +92,11 @@ export default function TransactionsPage() {
       category_id: form.category_id || null,
       is_paid: form.is_paid,
     }
-    if (editing) {
-      updateTransaction(editing.id, payload).then(() => {
-        setEditing(null)
-        openCreate()
-        load()
-      })
-    } else {
-      createTransaction(payload).then(() => {
-        openCreate()
-        load()
-      })
-    }
+    const promise = editing
+      ? updateTransaction(editing.id, payload)
+      : createTransaction(payload)
+
+    promise.then(() => { closeModal(); load() })
   }
 
   function handleDelete(t: Transaction) {
@@ -94,141 +104,305 @@ export default function TransactionsPage() {
     deleteTransaction(t.id).then(load)
   }
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">Transações</h1>
-      <p className="mt-1 text-muted-foreground">Receitas e despesas.</p>
+  const catMap = new Map(categories.map((c) => [c.id, c]))
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-6 p-4 bg-card rounded-lg border border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        <div>
-          <label className="block text-sm font-medium text-foreground">Descrição</label>
-          <input
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            placeholder="Ex: Supermercado"
-            required
-          />
+  const filtered = transactions.filter((t) => {
+    if (filter !== 'all' && t.type !== filter) return false
+    if (catFilter !== null && t.category_id !== catFilter) return false
+    if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  const totalReceitas = transactions.filter((t) => t.type === 'receita').reduce((s, t) => s + Number(t.amount), 0)
+  const totalDespesas = transactions.filter((t) => t.type === 'despesa').reduce((s, t) => s + Number(t.amount), 0)
+  const saldo = totalReceitas - totalDespesas
+
+  const typeFilters: { key: FilterType; label: string }[] = [
+    { key: 'all', label: 'Todas' },
+    { key: 'receita', label: 'Receitas' },
+    { key: 'despesa', label: 'Despesas' },
+  ]
+
+  return (
+    <>
+      <div className="space-y-6">
+        {/* Summary bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-lg p-4 sm:p-[18px]">
+            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Receitas do mês</p>
+            <p className="font-mono text-lg font-medium text-[var(--green)]">{formatMoney(totalReceitas)}</p>
+          </div>
+          <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-lg p-4 sm:p-[18px]">
+            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Despesas do mês</p>
+            <p className="font-mono text-lg font-medium text-[var(--red)]">{formatMoney(totalDespesas)}</p>
+          </div>
+          <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-lg p-4 sm:p-[18px]">
+            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Saldo líquido</p>
+            <p className="font-mono text-lg font-medium text-[var(--blue)]">{formatMoney(saldo)}</p>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-foreground">Valor</label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={form.amount}
-            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            placeholder="0,00"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-foreground">Tipo</label>
-          <select
-            value={form.type}
-            onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'receita' | 'despesa' }))}
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-          >
-            <option value="despesa">Despesa</option>
-            <option value="receita">Receita</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-foreground">Data</label>
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-foreground">Categoria</label>
-          <select
-            value={form.category_id ?? ''}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                category_id: e.target.value ? Number(e.target.value) : null,
-              }))
-            }
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-          >
-            <option value="">Nenhuma</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+
+        {/* Table card */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius)] p-4 sm:p-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Todas as transações</h2>
+              <p className="text-xs text-[var(--text3)] mt-0.5">{filtered.length} transação(ões) encontrada(s)</p>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {/* Search */}
+              <div className="flex items-center gap-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg px-3 py-2 flex-1 sm:max-w-[260px] focus-within:border-[var(--border2)] transition-colors">
+                <span className="text-[var(--text3)] text-sm">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Buscar por descrição..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-transparent border-none outline-none text-[13px] text-foreground placeholder:text-[var(--text3)] w-full font-sans"
+                />
+              </div>
+              <button
+                onClick={openCreate}
+                className="shrink-0 flex items-center gap-1.5 bg-[var(--green)] text-black border-none rounded-lg px-4 py-2 text-[13px] font-semibold cursor-pointer transition-[opacity,transform] duration-75 hover:opacity-90 hover:-translate-y-px active:translate-y-0"
+              >
+                + Nova
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-5">
+            {typeFilters.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-75 font-sans ${
+                  filter === f.key
+                    ? 'bg-[var(--green)]/10 border-[var(--green)]/30 text-[var(--green)]'
+                    : 'border-[var(--border)] bg-transparent text-[var(--text3)] hover:border-[var(--border2)] hover:text-[var(--text2)]'
+                }`}
+              >
+                {f.label}
+              </button>
             ))}
-          </select>
-        </div>
-        <div className="flex items-end gap-2">
-          <Button type="submit">{editing ? 'Salvar' : 'Adicionar'}</Button>
-          {editing && (
-            <Button type="button" variant="outline" onClick={openCreate}>
-              Cancelar
-            </Button>
+            <span className="w-px h-4 bg-[var(--border)] mx-1 hidden sm:block" />
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCatFilter(catFilter === c.id ? null : c.id)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-75 font-sans ${
+                  catFilter === c.id
+                    ? 'bg-[var(--green)]/10 border-[var(--green)]/30 text-[var(--green)]'
+                    : 'border-[var(--border)] bg-transparent text-[var(--text3)] hover:border-[var(--border2)] hover:text-[var(--text2)]'
+                }`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Table */}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-6 h-6 border-2 border-[var(--green)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-[var(--text3)] py-12 text-center">Nenhuma transação encontrada.</p>
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+              <table className="w-full border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="pb-3 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">Descrição</th>
+                    <th className="pb-3 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">Data</th>
+                    <th className="pb-3 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">Categoria</th>
+                    <th className="pb-3 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">Tipo</th>
+                    <th className="pb-3 text-right text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">Valor</th>
+                    <th className="pb-3 w-[100px]"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((t) => {
+                    const cat = t.category_id ? catMap.get(t.category_id) : null
+                    const icon = cat?.icon || (t.type === 'receita' ? '💵' : '🛒')
+                    const iconBg = t.type === 'receita' ? 'bg-[var(--green)]/10' : 'bg-[var(--blue)]/10'
+                    return (
+                      <tr
+                        key={t.id}
+                        className="group border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--surface2)] transition-colors"
+                      >
+                        <td className="py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center text-base shrink-0 ${iconBg}`}>
+                              {icon}
+                            </div>
+                            <div>
+                              <p className="text-[13.5px] font-medium text-foreground">{t.description}</p>
+                              {cat && <p className="text-[11.5px] text-[var(--text3)] mt-0.5">{cat.name}</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 text-[13px] text-[var(--text3)]">
+                          {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="py-3.5">
+                          {cat ? (
+                            <span
+                              className="inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: `${cat.color}1a`, color: cat.color }}
+                            >
+                              {cat.name}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[var(--text3)]">—</span>
+                          )}
+                        </td>
+                        <td className="py-3.5">
+                          <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                            t.type === 'receita' ? 'bg-[var(--green)]/10 text-[var(--green)]' : 'bg-[var(--red)]/10 text-[var(--red)]'
+                          }`}>
+                            {t.type === 'receita' ? 'Receita' : 'Despesa'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-right">
+                          <span className={`font-mono text-sm font-medium ${t.type === 'receita' ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                            {t.type === 'receita' ? '+' : '−'} {formatMoney(Number(t.amount))}
+                          </span>
+                        </td>
+                        <td className="py-3.5">
+                          <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-75">
+                            <button
+                              onClick={() => openEdit(t)}
+                              className="text-[11px] px-2.5 py-1 rounded-md border border-[var(--border)] bg-[var(--surface3)] text-[var(--text2)] hover:text-foreground hover:border-[var(--border2)] transition-colors duration-75"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(t)}
+                              className="text-[11px] px-2.5 py-1 rounded-md border border-[var(--red)]/20 text-[var(--red)] hover:bg-[var(--red)]/10 transition-colors duration-75"
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination info */}
+          {!loading && filtered.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-[var(--border)] flex items-center justify-between">
+              <p className="text-xs text-[var(--text3)]">Mostrando {filtered.length} de {transactions.length} transações</p>
+            </div>
           )}
         </div>
-      </form>
+      </div>
 
-      {loading ? (
-        <p className="mt-4 text-muted-foreground">Carregando...</p>
-      ) : transactions.length === 0 ? (
-        <p className="mt-4 text-muted-foreground">Nenhuma transação. Adicione uma acima.</p>
-      ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full border-collapse bg-card rounded-lg border border-border">
-            <thead>
-              <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                <th className="p-3 font-medium">Data</th>
-                <th className="p-3 font-medium">Descrição</th>
-                <th className="p-3 font-medium">Tipo</th>
-                <th className="p-3 font-medium text-right">Valor</th>
-                <th className="p-3 font-medium w-28">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((t) => (
-                <tr key={t.id} className="border-b border-border last:border-b-0">
-                  <td className="p-3 text-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
-                  <td className="p-3 text-foreground">{t.description}</td>
-                  <td className="p-3">
-                    <span
-                      className={
-                        t.type === 'receita'
-                          ? 'text-[var(--success)] font-medium'
-                          : 'text-destructive font-medium'
-                      }
-                    >
-                      {t.type === 'receita' ? 'Receita' : 'Despesa'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right font-medium">
-                    <span className={t.type === 'receita' ? 'text-[var(--success)]' : 'text-destructive'}>
-                      {t.type === 'receita' ? '+' : '-'} R$ {Number(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
-                        Editar
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(t)}>
-                        Excluir
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Modal */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}
+        >
+          <div className="bg-[var(--surface)] border border-[var(--border2)] rounded-[var(--radius)] p-7 w-[480px] max-w-full animate-fade-up">
+            <h2 className="text-base font-semibold text-foreground mb-1.5">
+              {editing ? 'Editar transação' : 'Nova transação'}
+            </h2>
+            <p className="text-[13px] text-[var(--text3)] mb-6">
+              {editing ? 'Altere os dados da transação' : 'Adicione uma receita ou despesa'}
+            </p>
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-2 gap-3.5 mb-5">
+                {/* Description + Emoji */}
+                <div className="col-span-2">
+                  <label className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">Descrição</label>
+                  <div className="flex gap-2">
+                    <EmojiPicker value={form.icon} onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))} />
+                    <input
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface3)] px-3 py-2.5 text-[13px] text-foreground placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
+                      placeholder="Ex: Supermercado"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">Valor (R$)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface3)] px-3 py-2.5 text-[13px] text-foreground font-mono placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
+                    placeholder="0,00"
+                    required
+                  />
+                </div>
+
+                {/* Type */}
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">Tipo</label>
+                  <CustomSelect
+                    value={form.type}
+                    onChange={(v) => setForm((f) => ({ ...f, type: v as 'receita' | 'despesa' }))}
+                    options={[
+                      { value: 'despesa', label: 'Despesa' },
+                      { value: 'receita', label: 'Receita' },
+                    ]}
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">Categoria</label>
+                  <CustomSelect
+                    value={String(form.category_id ?? '')}
+                    onChange={(v) => setForm((f) => ({ ...f, category_id: v ? Number(v) : null }))}
+                    options={[
+                      { value: '', label: 'Nenhuma' },
+                      ...categories.map((c) => ({ value: String(c.id), label: `${c.icon || ''} ${c.name}`.trim() })),
+                    ]}
+                    placeholder="Selecionar categoria"
+                  />
+                </div>
+
+                {/* Date */}
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">Data</label>
+                  <DatePicker
+                    value={form.date}
+                    onChange={(v) => setForm((f) => ({ ...f, date: v }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 justify-end">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="flex items-center gap-1.5 bg-[var(--surface2)] text-[var(--text2)] border border-[var(--border)] rounded-lg px-4 py-2 text-[13px] font-medium hover:border-[var(--border2)] hover:text-foreground transition-colors duration-75 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 bg-[var(--green)] text-black border-none rounded-lg px-4 py-2 text-[13px] font-semibold cursor-pointer transition-[opacity,transform] duration-75 hover:opacity-90"
+                >
+                  {editing ? 'Salvar' : 'Adicionar'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

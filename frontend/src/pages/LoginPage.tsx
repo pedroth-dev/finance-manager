@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/button'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -26,53 +25,78 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-foreground text-center">Finance Manager</h1>
-        <p className="mt-1 text-center text-sm text-muted-foreground">Entre na sua conta</p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {error && (
-            <p className="text-sm text-destructive bg-destructive/10 border border-border rounded-md px-3 py-2">
-              {error}
-            </p>
-          )}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-foreground">
-              E-mail
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="seu@email.com"
-            />
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+          <div className="w-9 h-9 rounded-lg bg-[var(--green)] flex items-center justify-center text-base">
+            💰
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Entrando...' : 'Entrar'}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Não tem conta?{' '}
-          <Link to="/register" className="font-medium text-primary hover:underline">
-            Cadastre-se
-          </Link>
-        </p>
+          <span className="text-base font-semibold tracking-wide text-foreground">
+            Finance<span className="text-[var(--green)]">Manager</span>
+          </span>
+        </div>
+
+        {/* Card */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius)] p-8">
+          <h1 className="text-lg font-semibold text-foreground text-center">
+            Bem-vindo de volta
+          </h1>
+          <p className="mt-1 text-center text-[13px] text-[var(--text3)]">Entre na sua conta</p>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && (
+              <div className="text-[13px] text-[var(--red)] bg-[var(--red)]/8 border border-[var(--red)]/20 rounded-lg px-3 py-2.5">
+                {error}
+              </div>
+            )}
+            <div>
+              <label htmlFor="email" className="block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">
+                E-mail
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[13px] text-foreground placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
+                placeholder="seu@email.com"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">
+                Senha
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[13px] text-foreground placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center bg-[var(--green)] text-black border-none rounded-lg px-4 py-2.5 text-[13px] font-semibold cursor-pointer transition-[opacity,transform] duration-75 hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+              ) : (
+                'Entrar'
+              )}
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-[13px] text-[var(--text3)]">
+            Não tem conta?{' '}
+            <Link to="/register" className="font-medium text-[var(--green)] hover:underline">
+              Cadastre-se
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

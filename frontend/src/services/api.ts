@@ -89,3 +89,12 @@ export async function updateTransaction(
 export async function deleteTransaction(id: number) {
   return apiRequest<void>(`/transactions/${id}`, { method: 'DELETE' })
 }
+
+// Dashboard
+export async function getDashboardSummary(month?: number, year?: number) {
+  const params = new URLSearchParams()
+  if (month != null) params.set('month', String(month))
+  if (year != null) params.set('year', String(year))
+  const q = params.toString()
+  return apiRequest<import('@/types').DashboardSummary>(`/dashboard/summary${q ? `?${q}` : ''}`)
+}

@@ -30,3 +30,14 @@ export interface Transaction {
   is_recurring: boolean
   created_at?: string
 }
+
+export interface DashboardSummary {
+  receitas_mes: number
+  despesas_mes: number
+  saldo_mes: number
+  por_categoria: { name: string; color: string; total: number }[]
+  evolucao_mensal: { month: number; year: number; receitas: number; despesas: number; saldo: number }[]
+  ultimas_transacoes: { id: number; description: string; amount: number; type: string; date: string }[]
+  month: number
+  year: number
+}

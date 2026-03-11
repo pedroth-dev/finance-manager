@@ -27,3 +27,6 @@ PROCESSO.md
 .vscode/
 .DS_Store
 *.log
+
+# inspiration files
+finance-manager-telas.html
