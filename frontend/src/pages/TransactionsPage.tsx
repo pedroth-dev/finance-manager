@@ -96,58 +96,58 @@ export default function TransactionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-[#1A1A2E]">Transações</h1>
-      <p className="mt-1 text-[#6B7280]">Receitas e despesas.</p>
+      <h1 className="text-2xl font-bold text-foreground">Transações</h1>
+      <p className="mt-1 text-muted-foreground">Receitas e despesas.</p>
 
       <form
         onSubmit={handleSubmit}
-        className="mt-6 p-4 bg-white rounded-lg border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="mt-6 p-4 bg-card rounded-lg border border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Descrição</label>
+          <label className="block text-sm font-medium text-foreground">Descrição</label>
           <input
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
             placeholder="Ex: Supermercado"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Valor</label>
+          <label className="block text-sm font-medium text-foreground">Valor</label>
           <input
             type="text"
             inputMode="decimal"
             value={form.amount}
             onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-            className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
             placeholder="0,00"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Tipo</label>
+          <label className="block text-sm font-medium text-foreground">Tipo</label>
           <select
             value={form.type}
             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'receita' | 'despesa' }))}
-            className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           >
             <option value="despesa">Despesa</option>
             <option value="receita">Receita</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Data</label>
+          <label className="block text-sm font-medium text-foreground">Data</label>
           <input
             type="date"
             value={form.date}
             onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Categoria</label>
+          <label className="block text-sm font-medium text-foreground">Categoria</label>
           <select
             value={form.category_id ?? ''}
             onChange={(e) =>
@@ -156,7 +156,7 @@ export default function TransactionsPage() {
                 category_id: e.target.value ? Number(e.target.value) : null,
               }))
             }
-            className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           >
             <option value="">Nenhuma</option>
             {categories.map((c) => (
@@ -177,14 +177,14 @@ export default function TransactionsPage() {
       </form>
 
       {loading ? (
-        <p className="mt-4 text-[#6B7280]">Carregando...</p>
+        <p className="mt-4 text-muted-foreground">Carregando...</p>
       ) : transactions.length === 0 ? (
-        <p className="mt-4 text-[#6B7280]">Nenhuma transação. Adicione uma acima.</p>
+        <p className="mt-4 text-muted-foreground">Nenhuma transação. Adicione uma acima.</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full border-collapse bg-white rounded-lg border">
+          <table className="w-full border-collapse bg-card rounded-lg border border-border">
             <thead>
-              <tr className="border-b text-left text-sm text-[#6B7280]">
+              <tr className="border-b border-border text-left text-sm text-muted-foreground">
                 <th className="p-3 font-medium">Data</th>
                 <th className="p-3 font-medium">Descrição</th>
                 <th className="p-3 font-medium">Tipo</th>
@@ -194,22 +194,22 @@ export default function TransactionsPage() {
             </thead>
             <tbody>
               {transactions.map((t) => (
-                <tr key={t.id} className="border-b last:border-b-0">
-                  <td className="p-3 text-[#1A1A2E]">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
-                  <td className="p-3 text-[#1A1A2E]">{t.description}</td>
+                <tr key={t.id} className="border-b border-border last:border-b-0">
+                  <td className="p-3 text-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                  <td className="p-3 text-foreground">{t.description}</td>
                   <td className="p-3">
                     <span
                       className={
                         t.type === 'receita'
-                          ? 'text-[#10B981] font-medium'
-                          : 'text-[#EF4444] font-medium'
+                          ? 'text-[var(--success)] font-medium'
+                          : 'text-destructive font-medium'
                       }
                     >
                       {t.type === 'receita' ? 'Receita' : 'Despesa'}
                     </span>
                   </td>
                   <td className="p-3 text-right font-medium">
-                    <span className={t.type === 'receita' ? 'text-[#10B981]' : 'text-[#EF4444]'}>
+                    <span className={t.type === 'receita' ? 'text-[var(--success)]' : 'text-destructive'}>
                       {t.type === 'receita' ? '+' : '-'} R$ {Number(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </td>

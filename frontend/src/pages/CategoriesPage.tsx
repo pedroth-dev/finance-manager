@@ -54,27 +54,27 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-[#1A1A2E]">Categorias</h1>
-      <p className="mt-1 text-[#6B7280]">Gerencie suas categorias de receitas e despesas.</p>
+      <h1 className="text-2xl font-bold text-foreground">Categorias</h1>
+      <p className="mt-1 text-muted-foreground">Gerencie suas categorias de receitas e despesas.</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 p-4 bg-white rounded-lg border flex flex-wrap items-end gap-3">
+      <form onSubmit={handleSubmit} className="mt-6 p-4 bg-card rounded-lg border border-border flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Nome</label>
+          <label className="block text-sm font-medium text-foreground">Nome</label>
           <input
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="mt-1 rounded-md border border-[#E5E7EB] px-3 py-2 text-sm w-48"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground w-48"
             placeholder="Ex: Alimentação"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#1A1A2E]">Cor</label>
+          <label className="block text-sm font-medium text-foreground">Cor</label>
           <input
             type="color"
             value={form.color}
             onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-            className="mt-1 h-9 w-14 rounded border border-[#E5E7EB] cursor-pointer"
+            className="mt-1 h-9 w-14 rounded border border-input cursor-pointer"
           />
         </div>
         <Button type="submit">{editing ? 'Salvar' : 'Nova categoria'}</Button>
@@ -86,22 +86,22 @@ export default function CategoriesPage() {
       </form>
 
       {loading ? (
-        <p className="mt-4 text-[#6B7280]">Carregando...</p>
+        <p className="mt-4 text-muted-foreground">Carregando...</p>
       ) : list.length === 0 ? (
-        <p className="mt-4 text-[#6B7280]">Nenhuma categoria. Crie uma acima.</p>
+        <p className="mt-4 text-muted-foreground">Nenhuma categoria. Crie uma acima.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {list.map((c) => (
             <li
               key={c.id}
-              className="flex items-center justify-between p-3 bg-white rounded-lg border"
+              className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
             >
               <span className="flex items-center gap-2">
                 <span
                   className="w-4 h-4 rounded-full shrink-0"
                   style={{ backgroundColor: c.color }}
                 />
-                <span className="font-medium text-[#1A1A2E]">{c.name}</span>
+                <span className="font-medium text-foreground">{c.name}</span>
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openEdit(c)}>

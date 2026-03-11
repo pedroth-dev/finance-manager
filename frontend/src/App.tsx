@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import PrivateRoute from '@/components/PrivateRoute'
 import AppLayout from '@/components/AppLayout'
@@ -11,7 +12,8 @@ import CategoriesPage from '@/pages/CategoriesPage'
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -29,7 +31,8 @@ function App() {
             <Route path="categories" element={<CategoriesPage />} />
           </Route>
         </Routes>
-      </AuthProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

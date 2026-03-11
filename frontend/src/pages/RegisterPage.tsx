@@ -27,18 +27,18 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-      <div className="w-full max-w-sm rounded-lg border bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-[#1A1A2E] text-center">Finance Manager</h1>
-        <p className="mt-1 text-center text-sm text-[#6B7280]">Crie sua conta</p>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-foreground text-center">Finance Manager</h1>
+        <p className="mt-1 text-center text-sm text-muted-foreground">Crie sua conta</p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            <p className="text-sm text-destructive bg-destructive/10 border border-border rounded-md px-3 py-2">
               {error}
             </p>
           )}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-[#1A1A2E]">
+            <label htmlFor="name" className="block text-sm font-medium text-foreground">
               Nome
             </label>
             <input
@@ -47,12 +47,12 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#0F3460] focus:outline-none focus:ring-1 focus:ring-[#0F3460]"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="Seu nome"
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[#1A1A2E]">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground">
               E-mail
             </label>
             <input
@@ -61,12 +61,12 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#0F3460] focus:outline-none focus:ring-1 focus:ring-[#0F3460]"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="seu@email.com"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[#1A1A2E]">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground">
               Senha
             </label>
             <input
@@ -76,7 +76,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="mt-1 w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#0F3460] focus:outline-none focus:ring-1 focus:ring-[#0F3460]"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="Mínimo 6 caracteres"
             />
           </div>
@@ -84,9 +84,9 @@ export default function RegisterPage() {
             {loading ? 'Cadastrando...' : 'Cadastrar'}
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-[#6B7280]">
+        <p className="mt-4 text-center text-sm text-muted-foreground">
           Já tem conta?{' '}
-          <Link to="/login" className="font-medium text-[#0F3460] hover:underline">
+          <Link to="/login" className="font-medium text-primary hover:underline">
             Entrar
           </Link>
         </p>
