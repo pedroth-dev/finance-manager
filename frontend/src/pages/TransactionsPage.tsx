@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getTransactions,
   createTransaction,
@@ -6,17 +6,44 @@ import {
   deleteTransaction,
   getCategories,
 } from '@/services/api'
-import type { Transaction, Category } from '@/types'
+import type { Transaction, Category, TransactionSort } from '@/types'
 import EmojiPicker from '@/components/EmojiPicker'
 import CustomSelect from '@/components/CustomSelect'
 import DatePicker from '@/components/DatePicker'
 
 const today = new Date().toISOString().slice(0, 10)
+const PER_PAGE = 20
 
 type FilterType = 'all' | 'receita' | 'despesa'
+type PeriodPreset = 'all' | 'this_month' | 'last_month' | 'last_3_months' | 'this_year'
+type StatusFilter = 'all' | 'paid' | 'unpaid'
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+function getPeriodDates(preset: PeriodPreset): { date_from?: string; date_to?: string } {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  if (preset === 'all') return {}
+  if (preset === 'this_month') {
+    const first = new Date(y, m, 1)
+    return { date_from: first.toISOString().slice(0, 10), date_to: today }
+  }
+  if (preset === 'last_month') {
+    const first = new Date(y, m - 1, 1)
+    const last = new Date(y, m, 0)
+    return { date_from: first.toISOString().slice(0, 10), date_to: last.toISOString().slice(0, 10) }
+  }
+  if (preset === 'last_3_months') {
+    const from = new Date(y, m - 2, 1)
+    return { date_from: from.toISOString().slice(0, 10), date_to: today }
+  }
+  if (preset === 'this_year') {
+    return { date_from: `${y}-01-01`, date_to: today }
+  }
+  return {}
 }
 
 export default function TransactionsPage() {
@@ -28,6 +55,14 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [catFilter, setCatFilter] = useState<number | null>(null)
   const [search, setSearch] = useState('')
+  const [searchApi, setSearchApi] = useState('')
+  const [period, setPeriod] = useState<PeriodPreset>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [sort, setSort] = useState<TransactionSort>('date_desc')
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -38,17 +73,54 @@ export default function TransactionsPage() {
     icon: '🛒',
   })
 
-  function load() {
-    setLoading(true)
-    Promise.all([getTransactions(), getCategories()])
-      .then(([txs, cats]) => {
-        setTransactions(txs)
-        setCategories(cats)
-      })
-      .finally(() => setLoading(false))
-  }
+  const load = useCallback((pageNum: number, append: boolean) => {
+    if (pageNum === 1) setLoading(true)
+    else setLoadingMore(true)
+    const periodDates = getPeriodDates(period)
+    const params = {
+      type: filter === 'all' ? undefined : filter,
+      category_id: catFilter ?? undefined,
+      date_from: periodDates.date_from,
+      date_to: periodDates.date_to,
+      is_paid: statusFilter === 'all' ? undefined : statusFilter === 'paid',
+      search: searchApi || undefined,
+      sort,
+      page: pageNum,
+      per_page: PER_PAGE,
+    }
+    getTransactions(params).then((res) => {
+      if (append) {
+        setTransactions((prev) => [...prev, ...res.items])
+      } else {
+        setTransactions(res.items)
+      }
+      setTotal(res.total)
+      setPage(res.page)
+    }).finally(() => {
+      setLoading(false)
+      setLoadingMore(false)
+    })
+  }, [filter, catFilter, period, statusFilter, searchApi, sort])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    getCategories().then(setCategories)
+  }, [])
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => {
+      setSearchApi(search)
+      searchDebounceRef.current = null
+    }, 400)
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    }
+  }, [search])
+
+  useEffect(() => {
+    setPage(1)
+    load(1, false)
+  }, [load])
 
   function resetForm() {
     setEditing(null)
@@ -96,22 +168,19 @@ export default function TransactionsPage() {
       ? updateTransaction(editing.id, payload)
       : createTransaction(payload)
 
-    promise.then(() => { closeModal(); load() })
+    promise.then(() => { closeModal(); load(1, false) })
   }
 
   function handleDelete(t: Transaction) {
     if (!window.confirm(`Excluir "${t.description}"?`)) return
-    deleteTransaction(t.id).then(load)
+    deleteTransaction(t.id).then(() => load(1, false))
+  }
+
+  function loadMore() {
+    load(page + 1, true)
   }
 
   const catMap = new Map(categories.map((c) => [c.id, c]))
-
-  const filtered = transactions.filter((t) => {
-    if (filter !== 'all' && t.type !== filter) return false
-    if (catFilter !== null && t.category_id !== catFilter) return false
-    if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
 
   const totalReceitas = transactions.filter((t) => t.type === 'receita').reduce((s, t) => s + Number(t.amount), 0)
   const totalDespesas = transactions.filter((t) => t.type === 'despesa').reduce((s, t) => s + Number(t.amount), 0)
@@ -123,17 +192,42 @@ export default function TransactionsPage() {
     { key: 'despesa', label: 'Despesas' },
   ]
 
+  const periodOptions: { key: PeriodPreset; label: string }[] = [
+    { key: 'all', label: 'Todos' },
+    { key: 'this_month', label: 'Este mês' },
+    { key: 'last_month', label: 'Mês passado' },
+    { key: 'last_3_months', label: 'Últimos 3 meses' },
+    { key: 'this_year', label: 'Este ano' },
+  ]
+
+  const statusOptions: { key: StatusFilter; label: string }[] = [
+    { key: 'all', label: 'Todos' },
+    { key: 'paid', label: 'Pagos' },
+    { key: 'unpaid', label: 'Pendentes' },
+  ]
+
+  const sortOptions: { value: TransactionSort; label: string }[] = [
+    { value: 'date_desc', label: 'Data (mais recente)' },
+    { value: 'date_asc', label: 'Data (mais antiga)' },
+    { value: 'amount_desc', label: 'Valor (maior)' },
+    { value: 'amount_asc', label: 'Valor (menor)' },
+    { value: 'category_asc', label: 'Categoria (A–Z)' },
+    { value: 'category_desc', label: 'Categoria (Z–A)' },
+  ]
+
+  const hasMore = transactions.length < total
+
   return (
     <>
       <div className="space-y-6">
-        {/* Summary bar */}
+        {/* Summary bar — totais do resultado filtrado */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-lg p-4 sm:p-[18px]">
-            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Receitas do mês</p>
+            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Receitas</p>
             <p className="font-mono text-lg font-medium text-[var(--green)]">{formatMoney(totalReceitas)}</p>
           </div>
           <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-lg p-4 sm:p-[18px]">
-            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Despesas do mês</p>
+            <p className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em] mb-1.5">Despesas</p>
             <p className="font-mono text-lg font-medium text-[var(--red)]">{formatMoney(totalDespesas)}</p>
           </div>
           <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-lg p-4 sm:p-[18px]">
@@ -147,8 +241,8 @@ export default function TransactionsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Todas as transações</h2>
-              <p className="text-xs text-[var(--text3)] mt-0.5">{filtered.length} transação(ões) encontrada(s)</p>
+              <h2 className="text-sm font-semibold text-foreground">Transações</h2>
+              <p className="text-xs text-[var(--text3)] mt-0.5">{total} transação(ões) encontrada(s)</p>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {/* Search */}
@@ -171,8 +265,8 @@ export default function TransactionsPage() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 mb-5">
+          {/* Filtros: tipo, período, status */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
             {typeFilters.map((f) => (
               <button
                 key={f.key}
@@ -187,19 +281,61 @@ export default function TransactionsPage() {
               </button>
             ))}
             <span className="w-px h-4 bg-[var(--border)] mx-1 hidden sm:block" />
-            {categories.map((c) => (
+            {periodOptions.map((p) => (
               <button
-                key={c.id}
-                onClick={() => setCatFilter(catFilter === c.id ? null : c.id)}
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-75 font-sans ${
-                  catFilter === c.id
+                  period === p.key
                     ? 'bg-[var(--green)]/10 border-[var(--green)]/30 text-[var(--green)]'
                     : 'border-[var(--border)] bg-transparent text-[var(--text3)] hover:border-[var(--border2)] hover:text-[var(--text2)]'
                 }`}
               >
-                {c.name}
+                {p.label}
               </button>
             ))}
+            <span className="w-px h-4 bg-[var(--border)] mx-1 hidden sm:block" />
+            {statusOptions.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setStatusFilter(s.key)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-75 font-sans ${
+                  statusFilter === s.key
+                    ? 'bg-[var(--green)]/10 border-[var(--green)]/30 text-[var(--green)]'
+                    : 'border-[var(--border)] bg-transparent text-[var(--text3)] hover:border-[var(--border2)] hover:text-[var(--text2)]'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Categorias + Ordenação */}
+          <div className="flex flex-wrap items-center gap-3 mb-5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setCatFilter(catFilter === c.id ? null : c.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-75 font-sans ${
+                    catFilter === c.id
+                      ? 'bg-[var(--green)]/10 border-[var(--green)]/30 text-[var(--green)]'
+                      : 'border-[var(--border)] bg-transparent text-[var(--text3)] hover:border-[var(--border2)] hover:text-[var(--text2)]'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-[11px] text-[var(--text3)] uppercase tracking-[0.06em]">Ordenar</span>
+              <CustomSelect
+                value={sort}
+                onChange={(v) => setSort(v as TransactionSort)}
+                options={sortOptions}
+                className="w-[180px]"
+              />
+            </div>
           </div>
 
           {/* Table */}
@@ -207,7 +343,7 @@ export default function TransactionsPage() {
             <div className="flex items-center justify-center py-12">
               <div className="w-6 h-6 border-2 border-[var(--green)] border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : transactions.length === 0 ? (
             <p className="text-sm text-[var(--text3)] py-12 text-center">Nenhuma transação encontrada.</p>
           ) : (
             <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
@@ -223,7 +359,7 @@ export default function TransactionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((t) => {
+                  {transactions.map((t) => {
                     const cat = t.category_id ? catMap.get(t.category_id) : null
                     const icon = cat?.icon || (t.type === 'receita' ? '💵' : '🛒')
                     const iconBg = t.type === 'receita' ? 'bg-[var(--green)]/10' : 'bg-[var(--blue)]/10'
@@ -294,10 +430,22 @@ export default function TransactionsPage() {
             </div>
           )}
 
-          {/* Pagination info */}
-          {!loading && filtered.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-[var(--border)] flex items-center justify-between">
-              <p className="text-xs text-[var(--text3)]">Mostrando {filtered.length} de {transactions.length} transações</p>
+          {/* Pagination */}
+          {!loading && transactions.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-[var(--text3)]">
+                Mostrando {transactions.length} de {total} transação(ões)
+              </p>
+              {hasMore && (
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="text-[13px] font-medium text-[var(--green)] hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  {loadingMore ? 'Carregando…' : 'Carregar mais'}
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -35,3 +35,10 @@ class TransactionResponse(TransactionBase):
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+class TransactionListResponse(BaseModel):
+    items: list[TransactionResponse]
+    total: int
+    page: int
+    per_page: int

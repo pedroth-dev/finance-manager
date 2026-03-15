@@ -52,8 +52,31 @@ export async function deleteCategory(id: number) {
 }
 
 // Transactions
-export async function getTransactions() {
-  return apiRequest<import('@/types').Transaction[]>('/transactions')
+export interface GetTransactionsParams {
+  type?: 'receita' | 'despesa'
+  category_id?: number | null
+  date_from?: string
+  date_to?: string
+  is_paid?: boolean
+  search?: string
+  sort?: import('@/types').TransactionSort
+  page?: number
+  per_page?: number
+}
+
+export async function getTransactions(params?: GetTransactionsParams) {
+  const sp = new URLSearchParams()
+  if (params?.type) sp.set('type', params.type)
+  if (params?.category_id != null) sp.set('category_id', String(params.category_id))
+  if (params?.date_from) sp.set('date_from', params.date_from)
+  if (params?.date_to) sp.set('date_to', params.date_to)
+  if (params?.is_paid !== undefined) sp.set('is_paid', String(params.is_paid))
+  if (params?.search?.trim()) sp.set('search', params.search.trim())
+  if (params?.sort) sp.set('sort', params.sort)
+  if (params?.page != null) sp.set('page', String(params.page))
+  if (params?.per_page != null) sp.set('per_page', String(params.per_page))
+  const q = sp.toString()
+  return apiRequest<import('@/types').TransactionListResponse>(`/transactions${q ? `?${q}` : ''}`)
 }
 export async function createTransaction(data: {
   description: string

@@ -31,6 +31,21 @@ export interface Transaction {
   created_at?: string
 }
 
+export interface TransactionListResponse {
+  items: Transaction[]
+  total: number
+  page: number
+  per_page: number
+}
+
+export type TransactionSort =
+  | 'date_desc'
+  | 'date_asc'
+  | 'amount_desc'
+  | 'amount_asc'
+  | 'category_asc'
+  | 'category_desc'
+
 export interface DashboardSummary {
   receitas_mes: number
   despesas_mes: number
