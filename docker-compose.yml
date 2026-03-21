@@ -26,6 +26,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      PORT: "8000"
       DATABASE_URL: postgresql://postgres:postgres@db:5432/finance_manager
       SECRET_KEY: ${SECRET_KEY:-troque-esta-chave-em-producao-use-secrets-token-hex}
       # Front via Docker na porta 8080 + dev local 5173
@@ -33,9 +34,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   frontend:
     build:
