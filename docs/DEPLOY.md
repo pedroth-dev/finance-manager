@@ -63,8 +63,13 @@ Limitações típicas do free tier: cold start, limites de RAM/DB, possível “
 
 No `.env` ou variáveis do provedor, use **uma** das formas:
 
+- Uma URL: `CORS_ORIGINS=https://meu-front.vercel.app` (sem `/` no final; deve ser **idêntica** ao `Origin` do navegador)
 - JSON: `CORS_ORIGINS=["https://meu-front.vercel.app"]`
 - Vírgulas: `CORS_ORIGINS=https://a.com,https://b.com`
+
+Se a origem não bater, o preflight `OPTIONS` cai na rota (ex.: 405) **sem** header CORS — o DevTools mostra “No 'Access-Control-Allow-Origin' header”.
+
+Opcional: `CORS_ORIGIN_REGEX` (ex.: `https://.*\.vercel\.app`) para liberar todos os deploys `*.vercel.app` em beta; em produção prefira lista explícita.
 
 Sem a origem correta, o navegador bloqueia as requisições da API (erro de CORS).
 
