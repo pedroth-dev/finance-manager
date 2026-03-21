@@ -8,12 +8,16 @@ const mainNav = [
   { to: '/dashboard', label: 'Dashboard', icon: '◈' },
   { to: '/transactions', label: 'Transações', icon: '↕' },
   { to: '/categories', label: 'Categorias', icon: '⊞' },
+  { to: '/budgets', label: 'Orçamentos', icon: '▣' },
+  { to: '/reports', label: 'Relatórios', icon: '◫' },
 ]
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/transactions': 'Transações',
   '/categories': 'Categorias',
+  '/budgets': 'Orçamentos',
+  '/reports': 'Relatórios',
 }
 
 export default function AppLayout() {

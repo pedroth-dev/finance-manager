@@ -13,6 +13,8 @@ class TransactionBase(BaseModel):
     category_id: Optional[int] = None
     is_paid: bool = True
     is_recurring: bool = False
+    recurrence_frequency: Optional[str] = Field(None, pattern="^(weekly|monthly|yearly)$")
+    recurrence_end_date: Optional[date] = None
 
 
 class TransactionCreate(TransactionBase):
@@ -27,6 +29,8 @@ class TransactionUpdate(BaseModel):
     category_id: Optional[int] = None
     is_paid: Optional[bool] = None
     is_recurring: Optional[bool] = None
+    recurrence_frequency: Optional[str] = Field(None, pattern="^(weekly|monthly|yearly)$")
+    recurrence_end_date: Optional[date] = None
 
 
 class TransactionResponse(TransactionBase):

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getCategories, createCategory, updateCategory, deleteCategory } from '@/services/api'
 import type { Category } from '@/types'
 import EmojiPicker from '@/components/EmojiPicker'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 const COLOR_SWATCHES = [
   '#4d9fff', '#00e5a0', '#ff5e6c', '#f5c842',
@@ -13,6 +14,8 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Category | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [form, setForm] = useState({ name: '', color: '#4d9fff', icon: '🍔' })
 
   function load() {
@@ -55,9 +58,24 @@ export default function CategoriesPage() {
     promise.then(() => { closeModal(); load() })
   }
 
-  function handleDelete(c: Category) {
-    if (!window.confirm(`Excluir a categoria "${c.name}"?`)) return
-    deleteCategory(c.id).then(load)
+  function openDeleteConfirm(c: Category) {
+    setCategoryToDelete(c)
+  }
+
+  function closeDeleteConfirm() {
+    if (!deleteLoading) setCategoryToDelete(null)
+  }
+
+  function confirmDelete() {
+    if (!categoryToDelete) return
+    setDeleteLoading(true)
+    deleteCategory(categoryToDelete.id)
+      .then(() => {
+        setCategoryToDelete(null)
+        load()
+      })
+      .catch((err) => window.alert(err instanceof Error ? err.message : 'Erro ao excluir.'))
+      .finally(() => setDeleteLoading(false))
   }
 
   return (
@@ -109,7 +127,7 @@ export default function CategoriesPage() {
                       Editar
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                      onClick={(e) => { e.stopPropagation(); openDeleteConfirm(c) }}
                       className="text-[11px] px-2.5 py-1 rounded-md border border-[var(--red)]/20 text-[var(--red)] hover:bg-[var(--red)]/10 transition-colors duration-75"
                     >
                       Excluir
@@ -212,6 +230,16 @@ export default function CategoriesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={categoryToDelete !== null}
+        onClose={closeDeleteConfirm}
+        onConfirm={confirmDelete}
+        title="Excluir categoria"
+        message={categoryToDelete ? `Tem certeza que deseja excluir a categoria "${categoryToDelete.name}"? Esta ação não pode ser desfeita.` : ''}
+        confirmLabel="Excluir"
+        isLoading={deleteLoading}
+      />
     </>
   )
 }

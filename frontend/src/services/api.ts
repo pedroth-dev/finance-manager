@@ -26,6 +26,9 @@ export async function apiRequest<T>(
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(Array.isArray(err.detail) ? err.detail[0] : err.detail ?? res.statusText)
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T
+  }
   return res.json() as Promise<T>
 }
 
@@ -86,6 +89,8 @@ export async function createTransaction(data: {
   category_id?: number | null
   is_paid?: boolean
   is_recurring?: boolean
+  recurrence_frequency?: string | null
+  recurrence_end_date?: string | null
 }) {
   return apiRequest<import('@/types').Transaction>('/transactions', {
     method: 'POST',
@@ -102,6 +107,8 @@ export async function updateTransaction(
     category_id: number | null
     is_paid: boolean
     is_recurring: boolean
+    recurrence_frequency: string | null
+    recurrence_end_date: string | null
   }>
 ) {
   return apiRequest<import('@/types').Transaction>(`/transactions/${id}`, {
@@ -120,4 +127,51 @@ export async function getDashboardSummary(month?: number, year?: number) {
   if (year != null) params.set('year', String(year))
   const q = params.toString()
   return apiRequest<import('@/types').DashboardSummary>(`/dashboard/summary${q ? `?${q}` : ''}`)
+}
+
+// Budgets
+export async function getBudgets(month: number, year: number) {
+  return apiRequest<import('@/types').BudgetWithSpending[]>(`/budgets?month=${month}&year=${year}`)
+}
+export async function createBudget(data: { category_id: number; month: number; year: number; amount_limit: number }) {
+  return apiRequest<import('@/types').Budget>('/budgets', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+export async function updateBudget(id: number, data: { amount_limit?: number }) {
+  return apiRequest<import('@/types').Budget>(`/budgets/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+export async function deleteBudget(id: number) {
+  return apiRequest<void>(`/budgets/${id}`, { method: 'DELETE' })
+}
+
+// Reports
+export async function getReportMonthly(month: number, year: number) {
+  return apiRequest<import('@/types').ReportMonthly>(`/reports/monthly?month=${month}&year=${year}`)
+}
+export async function getReportComparative(months?: number, year?: number) {
+  const sp = new URLSearchParams()
+  if (months != null) sp.set('months', String(months))
+  if (year != null) sp.set('year', String(year))
+  const q = sp.toString()
+  return apiRequest<import('@/types').ReportComparative>(`/reports/comparative${q ? `?${q}` : ''}`)
+}
+
+export async function exportTransactionsCsv(params?: GetTransactionsParams): Promise<Blob> {
+  const sp = new URLSearchParams()
+  if (params?.type) sp.set('type', params.type)
+  if (params?.category_id != null) sp.set('category_id', String(params.category_id))
+  if (params?.date_from) sp.set('date_from', params.date_from)
+  if (params?.date_to) sp.set('date_to', params.date_to)
+  if (params?.is_paid !== undefined) sp.set('is_paid', String(params.is_paid))
+  if (params?.search?.trim()) sp.set('search', params.search.trim())
+  if (params?.sort) sp.set('sort', params.sort)
+  const url = `${API_BASE}/transactions/export/csv${sp.toString() ? `?${sp}` : ''}`
+  const res = await fetch(url, { headers: getAuthHeaders() as HeadersInit })
+  if (!res.ok) throw new Error('Falha ao exportar')
+  return res.blob()
 }

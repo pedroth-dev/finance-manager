@@ -161,8 +161,8 @@
   html {
     @apply font-sans;
   }
-  a, button {
-    @apply transition-colors duration-75;
+  a, button, [role="button"] {
+    @apply transition-colors duration-75 cursor-pointer;
   }
 
   ::-webkit-scrollbar { width: 5px; }

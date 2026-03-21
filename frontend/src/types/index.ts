@@ -28,6 +28,8 @@ export interface Transaction {
   category_id: number | null
   is_paid: boolean
   is_recurring: boolean
+  recurrence_frequency?: string | null
+  recurrence_end_date?: string | null
   created_at?: string
 }
 
@@ -45,6 +47,35 @@ export type TransactionSort =
   | 'amount_asc'
   | 'category_asc'
   | 'category_desc'
+
+export interface Budget {
+  id: number
+  user_id: number
+  category_id: number
+  month: number
+  year: number
+  amount_limit: string
+}
+
+export interface BudgetWithSpending extends Budget {
+  spent: string
+  category_name: string
+  category_color: string
+  alert: 'ok' | 'warning' | 'over'
+}
+
+export interface ReportMonthly {
+  month: number
+  year: number
+  receitas: number
+  despesas: number
+  saldo: number
+  por_categoria: { name: string; color: string; total: number }[]
+}
+
+export interface ReportComparative {
+  months: { month: number; year: number; receitas: number; despesas: number; saldo: number }[]
+}
 
 export interface DashboardSummary {
   receitas_mes: number

@@ -10,6 +10,7 @@ import type { Transaction, Category, TransactionSort } from '@/types'
 import EmojiPicker from '@/components/EmojiPicker'
 import CustomSelect from '@/components/CustomSelect'
 import DatePicker from '@/components/DatePicker'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 const today = new Date().toISOString().slice(0, 10)
 const PER_PAGE = 20
@@ -62,6 +63,8 @@ export default function TransactionsPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [form, setForm] = useState({
     description: '',
@@ -71,6 +74,9 @@ export default function TransactionsPage() {
     category_id: null as number | null,
     is_paid: true,
     icon: '🛒',
+    is_recurring: false,
+    recurrence_frequency: '' as '' | 'weekly' | 'monthly' | 'yearly',
+    recurrence_end_date: '' as string,
   })
 
   const load = useCallback((pageNum: number, append: boolean) => {
@@ -124,7 +130,10 @@ export default function TransactionsPage() {
 
   function resetForm() {
     setEditing(null)
-    setForm({ description: '', amount: '', type: 'despesa', date: today, category_id: null, is_paid: true, icon: '🛒' })
+    setForm({
+      description: '', amount: '', type: 'despesa', date: today, category_id: null, is_paid: true, icon: '🛒',
+      is_recurring: false, recurrence_frequency: '', recurrence_end_date: '',
+    })
   }
 
   function openCreate() {
@@ -143,6 +152,9 @@ export default function TransactionsPage() {
       category_id: t.category_id,
       is_paid: t.is_paid,
       icon: cat?.icon || (t.type === 'receita' ? '💵' : '🛒'),
+      is_recurring: t.is_recurring ?? false,
+      recurrence_frequency: (t.recurrence_frequency as '' | 'weekly' | 'monthly' | 'yearly') || '',
+      recurrence_end_date: t.recurrence_end_date?.slice(0, 10) ?? '',
     })
     setModalOpen(true)
   }
@@ -163,6 +175,9 @@ export default function TransactionsPage() {
       date: form.date,
       category_id: form.category_id || null,
       is_paid: form.is_paid,
+      is_recurring: form.is_recurring,
+      recurrence_frequency: form.is_recurring && form.recurrence_frequency ? form.recurrence_frequency : null,
+      recurrence_end_date: form.is_recurring && form.recurrence_end_date ? form.recurrence_end_date : null,
     }
     const promise = editing
       ? updateTransaction(editing.id, payload)
@@ -171,9 +186,26 @@ export default function TransactionsPage() {
     promise.then(() => { closeModal(); load(1, false) })
   }
 
-  function handleDelete(t: Transaction) {
-    if (!window.confirm(`Excluir "${t.description}"?`)) return
-    deleteTransaction(t.id).then(() => load(1, false))
+  function openDeleteConfirm(t: Transaction) {
+    setTransactionToDelete(t)
+  }
+
+  function closeDeleteConfirm() {
+    if (!deleteLoading) setTransactionToDelete(null)
+  }
+
+  function confirmDelete() {
+    if (!transactionToDelete) return
+    setDeleteLoading(true)
+    deleteTransaction(transactionToDelete.id)
+      .then(() => {
+        setTransactionToDelete(null)
+        load(1, false)
+      })
+      .catch((err) => {
+        window.alert(err instanceof Error ? err.message : 'Erro ao excluir.')
+      })
+      .finally(() => setDeleteLoading(false))
   }
 
   function loadMore() {
@@ -375,7 +407,14 @@ export default function TransactionsPage() {
                             </div>
                             <div>
                               <p className="text-[13.5px] font-medium text-foreground">{t.description}</p>
-                              {cat && <p className="text-[11.5px] text-[var(--text3)] mt-0.5">{cat.name}</p>}
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                {cat && <span className="text-[11.5px] text-[var(--text3)]">{cat.name}</span>}
+                                {t.is_recurring && (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--purple)]/15 text-[var(--purple)]">
+                                    Recorrente
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -415,7 +454,7 @@ export default function TransactionsPage() {
                               Editar
                             </button>
                             <button
-                              onClick={() => handleDelete(t)}
+                              onClick={() => openDeleteConfirm(t)}
                               className="text-[11px] px-2.5 py-1 rounded-md border border-[var(--red)]/20 text-[var(--red)] hover:bg-[var(--red)]/10 transition-colors duration-75"
                             >
                               Excluir
@@ -530,6 +569,44 @@ export default function TransactionsPage() {
                     onChange={(v) => setForm((f) => ({ ...f, date: v }))}
                   />
                 </div>
+
+                {/* Recorrência */}
+                <div className="col-span-2 flex flex-col gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.is_recurring}
+                      onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
+                      className="rounded border-[var(--border)]"
+                    />
+                    <span className="text-[13px] text-foreground">Lançamento recorrente</span>
+                  </label>
+                  {form.is_recurring && (
+                    <div className="flex flex-wrap items-center gap-3 pl-6">
+                      <div>
+                        <span className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1">Frequência</span>
+                        <CustomSelect
+                          value={form.recurrence_frequency || 'monthly'}
+                          onChange={(v) => setForm((f) => ({ ...f, recurrence_frequency: (v || 'monthly') as 'weekly' | 'monthly' | 'yearly' }))}
+                          options={[
+                            { value: 'weekly', label: 'Semanal' },
+                            { value: 'monthly', label: 'Mensal' },
+                            { value: 'yearly', label: 'Anual' },
+                          ]}
+                          className="w-[130px]"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1">Até (opcional)</span>
+                        <DatePicker
+                          value={form.recurrence_end_date}
+                          onChange={(v) => setForm((f) => ({ ...f, recurrence_end_date: v }))}
+                          className="w-[140px]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-2.5 justify-end">
@@ -551,6 +628,16 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={transactionToDelete !== null}
+        onClose={closeDeleteConfirm}
+        onConfirm={confirmDelete}
+        title="Excluir transação"
+        message={transactionToDelete ? `Tem certeza que deseja excluir "${transactionToDelete.description}"? Esta ação não pode ser desfeita.` : ''}
+        confirmLabel="Excluir"
+        isLoading={deleteLoading}
+      />
     </>
   )
 }
