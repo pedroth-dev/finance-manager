@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { getDashboardSummary } from '@/services/api'
 import type { DashboardSummary } from '@/types'
+import { formatDateOnlyPtBR } from '@/lib/dateLocal'
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
@@ -414,17 +415,13 @@ export default function DashboardPage() {
                         <div>
                           <p className="text-[13.5px] font-medium text-foreground">{t.description}</p>
                           <p className="text-[11px] text-[var(--text3)] sm:hidden mt-0.5">
-                            {new Date(t.date).toLocaleDateString('pt-BR')}
+                            {formatDateOnlyPtBR(t.date, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-3.5 text-[13px] text-[var(--text3)] hidden sm:table-cell">
-                      {new Date(t.date).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatDateOnlyPtBR(t.date)}
                     </td>
                     <td className="py-3.5 hidden md:table-cell">
                       <span

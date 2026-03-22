@@ -11,8 +11,8 @@ import EmojiPicker from '@/components/EmojiPicker'
 import CustomSelect from '@/components/CustomSelect'
 import DatePicker from '@/components/DatePicker'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import { dateToYMD, formatDateOnlyPtBR, localTodayYMD } from '@/lib/dateLocal'
 
-const today = new Date().toISOString().slice(0, 10)
 const PER_PAGE = 20
 
 type FilterType = 'all' | 'receita' | 'despesa'
@@ -27,22 +27,23 @@ function getPeriodDates(preset: PeriodPreset): { date_from?: string; date_to?: s
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth()
+  const dateTo = localTodayYMD()
   if (preset === 'all') return {}
   if (preset === 'this_month') {
     const first = new Date(y, m, 1)
-    return { date_from: first.toISOString().slice(0, 10), date_to: today }
+    return { date_from: dateToYMD(first), date_to: dateTo }
   }
   if (preset === 'last_month') {
     const first = new Date(y, m - 1, 1)
     const last = new Date(y, m, 0)
-    return { date_from: first.toISOString().slice(0, 10), date_to: last.toISOString().slice(0, 10) }
+    return { date_from: dateToYMD(first), date_to: dateToYMD(last) }
   }
   if (preset === 'last_3_months') {
     const from = new Date(y, m - 2, 1)
-    return { date_from: from.toISOString().slice(0, 10), date_to: today }
+    return { date_from: dateToYMD(from), date_to: dateTo }
   }
   if (preset === 'this_year') {
-    return { date_from: `${y}-01-01`, date_to: today }
+    return { date_from: `${y}-01-01`, date_to: dateTo }
   }
   return {}
 }
@@ -72,7 +73,7 @@ export default function TransactionsPage() {
     description: '',
     amount: '',
     type: 'despesa' as 'receita' | 'despesa',
-    date: today,
+    date: localTodayYMD(),
     category_id: null as number | null,
     is_paid: true,
     icon: '🛒',
@@ -135,7 +136,7 @@ export default function TransactionsPage() {
     setSubmitError('')
     setSubmitting(false)
     setForm({
-      description: '', amount: '', type: 'despesa', date: today, category_id: null, is_paid: true, icon: '🛒',
+      description: '', amount: '', type: 'despesa', date: localTodayYMD(), category_id: null, is_paid: true, icon: '🛒',
       is_recurring: false, recurrence_frequency: '', recurrence_end_date: '',
     })
   }
@@ -451,7 +452,7 @@ export default function TransactionsPage() {
                           </div>
                         </td>
                         <td className="py-3.5 text-[13px] text-[var(--text3)]">
-                          {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {formatDateOnlyPtBR(t.date)}
                         </td>
                         <td className="py-3.5">
                           {cat ? (
