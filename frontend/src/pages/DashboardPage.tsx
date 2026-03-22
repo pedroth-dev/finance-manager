@@ -35,7 +35,14 @@ function DonutChart({
 }) {
   const r = 38
   const circ = 2 * Math.PI * r
-  let offset = 0
+  const dashes = data.map((item) => (total > 0 ? item.total / total : 0) * circ)
+  const { offsets } = dashes.reduce<{ offsets: number[]; sum: number }>(
+    (state, d) => ({
+      offsets: [...state.offsets, state.sum],
+      sum: state.sum + d,
+    }),
+    { offsets: [], sum: 0 }
+  )
 
   return (
     <div className="flex flex-col items-center">
@@ -43,9 +50,8 @@ function DonutChart({
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
           <circle cx="50" cy="50" r={r} fill="none" stroke="var(--surface2)" strokeWidth="12" />
           {data.map((item, i) => {
-            const pct = total > 0 ? item.total / total : 0
-            const dash = pct * circ
-            const el = (
+            const dash = dashes[i]
+            return (
               <circle
                 key={i}
                 cx="50"
@@ -55,12 +61,10 @@ function DonutChart({
                 stroke={item.color || DONUT_COLORS[i % DONUT_COLORS.length]}
                 strokeWidth="12"
                 strokeDasharray={`${dash} ${circ}`}
-                strokeDashoffset={-offset}
+                strokeDashoffset={-offsets[i]}
                 strokeLinecap="round"
               />
             )
-            offset += dash
-            return el
           })}
         </svg>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">

@@ -19,5 +19,17 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Regra do compiler React: desencoraja setState síncrono no corpo do effect.
+      // Padrões comuns (loading + fetch na montagem, reset ao mudar deps) ainda são válidos aqui.
+      'react-hooks/set-state-in-effect': 'off',
+      'react-refresh/only-export-components': [
+        'error',
+        {
+          allowConstantExport: true,
+          allowExportNames: ['useAuth', 'useTheme'],
+        },
+      ],
+    },
   },
 ])
