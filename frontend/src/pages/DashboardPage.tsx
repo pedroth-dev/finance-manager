@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
 } from 'recharts'
 import { getDashboardSummary } from '@/services/api'
 import type { DashboardSummary } from '@/types'
@@ -23,6 +24,12 @@ function formatMoney(value: number) {
 function formatMoneyShort(value: number) {
   if (Math.abs(value) >= 1000) return `R$ ${(value / 1000).toFixed(1)}k`
   return `R$ ${value}`
+}
+
+function barTopLabelFormatter(value: unknown) {
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  return formatMoneyShort(n)
 }
 
 /** Mesmo critério do backend: tira meses sem receita nem despesa no começo da série. */
@@ -301,7 +308,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={evolucaoComLabel} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+            <BarChart data={evolucaoComLabel} margin={{ top: 26, right: 4, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="mesAno"
@@ -316,8 +323,24 @@ export default function DashboardPage() {
                 tickFormatter={formatMoneyShort}
               />
               <Tooltip content={<BarTooltipContent />} cursor={{ fill: 'var(--surface2)' }} />
-              <Bar dataKey="receitas" name="Receitas" fill="var(--green)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="despesas" name="Despesas" fill="var(--red)" opacity={0.7} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="receitas" name="Receitas" fill="var(--green)" radius={[4, 4, 0, 0]}>
+                <LabelList
+                  dataKey="receitas"
+                  position="top"
+                  fill="var(--text2)"
+                  fontSize={11}
+                  formatter={barTopLabelFormatter}
+                />
+              </Bar>
+              <Bar dataKey="despesas" name="Despesas" fill="var(--red)" opacity={0.7} radius={[4, 4, 0, 0]}>
+                <LabelList
+                  dataKey="despesas"
+                  position="top"
+                  fill="var(--text2)"
+                  fontSize={11}
+                  formatter={barTopLabelFormatter}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div className="flex gap-4 mt-3">
