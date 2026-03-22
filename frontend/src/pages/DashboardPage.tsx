@@ -25,6 +25,32 @@ function formatMoneyShort(value: number) {
   return `R$ ${value}`
 }
 
+/** Mesmo critério do backend: tira meses sem receita nem despesa no começo da série. */
+function trimLeadingMonthsWithoutMovement(
+  rows: { month: number; year: number; receitas: number; despesas: number }[],
+) {
+  if (rows.length === 0) return []
+  const firstWithData = rows.findIndex((r) => r.receitas > 0 || r.despesas > 0)
+  if (firstWithData === -1) return [rows[rows.length - 1]]
+  return rows.slice(firstWithData)
+}
+
+function evolucaoChartSubtitle(
+  rows: { month: number; year: number }[],
+  meses: string[],
+): string {
+  const n = rows.length
+  if (n === 0) return ''
+  if (n === 1) {
+    const e = rows[0]
+    return `${meses[e.month - 1]} ${e.year}`
+  }
+  if (n === 6) return 'Últimos 6 meses'
+  const first = rows[0]
+  const last = rows[n - 1]
+  return `${meses[first.month - 1]} ${first.year} — ${meses[last.month - 1]} ${last.year}`
+}
+
 /* ── Donut Chart SVG ── */
 function DonutChart({
   data,
@@ -187,7 +213,8 @@ export default function DashboardPage() {
     )
   }
 
-  const evolucaoComLabel = data.evolucao_mensal.map((e) => ({
+  const evolucaoMensal = trimLeadingMonthsWithoutMovement(data.evolucao_mensal)
+  const evolucaoComLabel = evolucaoMensal.map((e) => ({
     ...e,
     mesAno: `${MESES[e.month - 1]}`,
   }))
@@ -268,7 +295,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Evolução financeira</h2>
-              <p className="text-xs text-[var(--text3)] mt-0.5">Últimos 6 meses</p>
+              <p className="text-xs text-[var(--text3)] mt-0.5">
+                {evolucaoChartSubtitle(evolucaoMensal, MESES)}
+              </p>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>

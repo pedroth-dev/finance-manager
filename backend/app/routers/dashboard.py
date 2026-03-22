@@ -104,6 +104,17 @@ def get_summary(
         })
     evolucao.reverse()
 
+    # Remove meses sem movimento no início da janela (evita colunas vazias à esquerda).
+    # Se não houver nenhum mês com receita ou despesa na janela, mantém só o mês de referência.
+    def _has_movement(row: dict) -> bool:
+        return row["receitas"] > 0 or row["despesas"] > 0
+
+    first_with_data = next((i for i, row in enumerate(evolucao) if _has_movement(row)), None)
+    if first_with_data is not None:
+        evolucao = evolucao[first_with_data:]
+    else:
+        evolucao = evolucao[-1:]
+
     # Últimas 10 transações
     ultimas = (
         db.query(Transaction)
