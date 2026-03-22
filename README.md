@@ -45,3 +45,4 @@ O projeto assume um banco PostgreSQL chamado `finance_manager`. A string de cone
 
 - **Docker:** na raiz do repo, `docker compose up --build` sobe Postgres, API e front estático (ver `docker-compose.yml`).
 - **Hospedagem gratuita / beta:** front (ex.: Vercel) + API + Postgres em serviços com free tier; configure `VITE_API_URL` e `CORS_ORIGINS`. Detalhes em **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+- **Manutenção, deploy contínuo e CI/CD:** **[docs/MANUTENCAO_DEPLOY_CI.md](docs/MANUTENCAO_DEPLOY_CI.md)** (Vercel, Render, Neon, checklist e evolução de testes).

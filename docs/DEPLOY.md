@@ -96,3 +96,5 @@ Detalhes dependem da distribuição; use guias oficiais do Nginx e Certbot.
 ## CI (GitHub Actions)
 
 O workflow `.github/workflows/ci.yml` roda build do frontend e instala dependências do backend (validação básica em cada push/PR). Não faz deploy automático — isso pode ser configurado depois no provedor escolhido.
+
+Para manutenção do dia a dia, fluxo de produção e como fortalecer CI/CD, veja **[MANUTENCAO_DEPLOY_CI.md](./MANUTENCAO_DEPLOY_CI.md)**.
