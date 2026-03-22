@@ -65,6 +65,8 @@ export default function TransactionsPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [form, setForm] = useState({
     description: '',
@@ -130,6 +132,8 @@ export default function TransactionsPage() {
 
   function resetForm() {
     setEditing(null)
+    setSubmitError('')
+    setSubmitting(false)
     setForm({
       description: '', amount: '', type: 'despesa', date: today, category_id: null, is_paid: true, icon: '🛒',
       is_recurring: false, recurrence_frequency: '', recurrence_end_date: '',
@@ -143,6 +147,8 @@ export default function TransactionsPage() {
 
   function openEdit(t: Transaction) {
     const cat = t.category_id ? catMap.get(t.category_id) : null
+    setSubmitError('')
+    setSubmitting(false)
     setEditing(t)
     setForm({
       description: t.description,
@@ -151,7 +157,7 @@ export default function TransactionsPage() {
       date: t.date.slice(0, 10),
       category_id: t.category_id,
       is_paid: t.is_paid,
-      icon: cat?.icon || (t.type === 'receita' ? '💵' : '🛒'),
+      icon: (t.icon && t.icon.trim()) || cat?.icon || (t.type === 'receita' ? '💵' : '🛒'),
       is_recurring: t.is_recurring ?? false,
       recurrence_frequency: (t.recurrence_frequency as '' | 'weekly' | 'monthly' | 'yearly') || '',
       recurrence_end_date: t.recurrence_end_date?.slice(0, 10) ?? '',
@@ -166,9 +172,26 @@ export default function TransactionsPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError('')
+    if (!form.description.trim()) {
+      setSubmitError('Informe uma descrição válida.')
+      return
+    }
     const amount = parseFloat(form.amount.replace(',', '.'))
-    if (!form.description.trim() || isNaN(amount) || amount < 0) return
+    if (isNaN(amount)) {
+      setSubmitError('Informe um valor numérico válido.')
+      return
+    }
+    if (amount < 0) {
+      setSubmitError('O valor não pode ser negativo.')
+      return
+    }
+    if (!form.date || !/^\d{4}-\d{2}-\d{2}$/.test(form.date)) {
+      setSubmitError('Informe uma data válida (dd/mm/aaaa).')
+      return
+    }
     const payload = {
+      icon: form.icon.trim(),
       description: form.description.trim(),
       amount,
       type: form.type,
@@ -179,11 +202,20 @@ export default function TransactionsPage() {
       recurrence_frequency: form.is_recurring && form.recurrence_frequency ? form.recurrence_frequency : null,
       recurrence_end_date: form.is_recurring && form.recurrence_end_date ? form.recurrence_end_date : null,
     }
+    setSubmitting(true)
     const promise = editing
       ? updateTransaction(editing.id, payload)
       : createTransaction(payload)
 
-    promise.then(() => { closeModal(); load(1, false) })
+    promise
+      .then(() => {
+        closeModal()
+        load(1, false)
+      })
+      .catch((err) => {
+        setSubmitError(err instanceof Error ? err.message : 'Não foi possível salvar.')
+      })
+      .finally(() => setSubmitting(false))
   }
 
   function openDeleteConfirm(t: Transaction) {
@@ -393,7 +425,7 @@ export default function TransactionsPage() {
                 <tbody>
                   {transactions.map((t) => {
                     const cat = t.category_id ? catMap.get(t.category_id) : null
-                    const icon = cat?.icon || (t.type === 'receita' ? '💵' : '🛒')
+                    const icon = (t.icon && t.icon.trim()) || cat?.icon || (t.type === 'receita' ? '💵' : '🛒')
                     const iconBg = t.type === 'receita' ? 'bg-[var(--green)]/10' : 'bg-[var(--blue)]/10'
                     return (
                       <tr
@@ -512,7 +544,10 @@ export default function TransactionsPage() {
                     <EmojiPicker value={form.icon} onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))} />
                     <input
                       value={form.description}
-                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      onChange={(e) => {
+                        setSubmitError('')
+                        setForm((f) => ({ ...f, description: e.target.value }))
+                      }}
                       className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface3)] px-3 py-2.5 text-[13px] text-foreground placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
                       placeholder="Ex: Supermercado"
                       required
@@ -527,7 +562,10 @@ export default function TransactionsPage() {
                     type="text"
                     inputMode="decimal"
                     value={form.amount}
-                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                    onChange={(e) => {
+                      setSubmitError('')
+                      setForm((f) => ({ ...f, amount: e.target.value }))
+                    }}
                     className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface3)] px-3 py-2.5 text-[13px] text-foreground font-mono placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
                     placeholder="0,00"
                     required
@@ -566,7 +604,10 @@ export default function TransactionsPage() {
                   <label className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] mb-1.5">Data</label>
                   <DatePicker
                     value={form.date}
-                    onChange={(v) => setForm((f) => ({ ...f, date: v }))}
+                    onChange={(v) => {
+                      setSubmitError('')
+                      setForm((f) => ({ ...f, date: v }))
+                    }}
                   />
                 </div>
 
@@ -609,19 +650,27 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
+              {submitError && (
+                <div className="mb-4 text-[13px] text-[var(--red)] bg-[var(--red)]/8 border border-[var(--red)]/20 rounded-lg px-3 py-2.5">
+                  {submitError}
+                </div>
+              )}
+
               <div className="flex gap-2.5 justify-end">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex items-center gap-1.5 bg-[var(--surface2)] text-[var(--text2)] border border-[var(--border)] rounded-lg px-4 py-2 text-[13px] font-medium hover:border-[var(--border2)] hover:text-foreground transition-colors duration-75 cursor-pointer"
+                  disabled={submitting}
+                  className="flex items-center gap-1.5 bg-[var(--surface2)] text-[var(--text2)] border border-[var(--border)] rounded-lg px-4 py-2 text-[13px] font-medium hover:border-[var(--border2)] hover:text-foreground transition-colors duration-75 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-1.5 bg-[var(--green)] text-black border-none rounded-lg px-4 py-2 text-[13px] font-semibold cursor-pointer transition-[opacity,transform] duration-75 hover:opacity-90"
+                  disabled={submitting}
+                  className="flex items-center gap-1.5 bg-[var(--green)] text-black border-none rounded-lg px-4 py-2 text-[13px] font-semibold cursor-pointer transition-[opacity,transform] duration-75 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
                 >
-                  {editing ? 'Salvar' : 'Adicionar'}
+                  {submitting ? 'Salvando…' : editing ? 'Salvar' : 'Adicionar'}
                 </button>
               </div>
             </form>

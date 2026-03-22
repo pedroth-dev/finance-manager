@@ -21,6 +21,7 @@ export interface Category {
 export interface Transaction {
   id: number
   user_id: number
+  icon?: string
   description: string
   amount: string
   type: 'receita' | 'despesa'

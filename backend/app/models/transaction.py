@@ -11,6 +11,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    icon: Mapped[str] = mapped_column(String(50), nullable=False, default="")
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False)  # "receita" | "despesa"

@@ -1,6 +1,31 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 const TOKEN_KEY = 'fm_token'
 
+/** FastAPI pode retornar `detail` string, array de strings ou array de objetos `{ msg, loc, ... }`. */
+function formatApiErrorDetail(detail: unknown, fallback: string): string {
+  if (detail == null) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    if (detail.length === 0) return fallback
+    const first = detail[0]
+    if (typeof first === 'string') return first
+    if (first && typeof first === 'object' && 'msg' in first) {
+      const msg = (first as { msg: unknown }).msg
+      if (typeof msg === 'string') return msg
+    }
+    try {
+      return JSON.stringify(first)
+    } catch {
+      return fallback
+    }
+  }
+  if (typeof detail === 'object' && detail !== null && 'msg' in detail) {
+    const msg = (detail as { msg: unknown }).msg
+    if (typeof msg === 'string') return msg
+  }
+  return fallback
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem(TOKEN_KEY)
   const headers: Record<string, string> = {
@@ -24,7 +49,7 @@ export async function apiRequest<T>(
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(Array.isArray(err.detail) ? err.detail[0] : err.detail ?? res.statusText)
+    throw new Error(formatApiErrorDetail(err.detail, res.statusText))
   }
   if (res.status === 204 || res.headers.get('content-length') === '0') {
     return undefined as T
@@ -82,6 +107,7 @@ export async function getTransactions(params?: GetTransactionsParams) {
   return apiRequest<import('@/types').TransactionListResponse>(`/transactions${q ? `?${q}` : ''}`)
 }
 export async function createTransaction(data: {
+  icon?: string
   description: string
   amount: number
   type: 'receita' | 'despesa'
@@ -100,6 +126,7 @@ export async function createTransaction(data: {
 export async function updateTransaction(
   id: number,
   data: Partial<{
+    icon: string
     description: string
     amount: number
     type: 'receita' | 'despesa'
