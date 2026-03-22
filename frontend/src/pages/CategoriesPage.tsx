@@ -17,6 +17,7 @@ export default function CategoriesPage() {
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [form, setForm] = useState({ name: '', color: '#4d9fff', icon: '🍔' })
+  const [formError, setFormError] = useState('')
 
   function load() {
     setLoading(true)
@@ -34,28 +35,39 @@ export default function CategoriesPage() {
 
   function openCreate() {
     resetForm()
+    setFormError('')
     setModalOpen(true)
   }
 
   function openEdit(c: Category) {
     setEditing(c)
     setForm({ name: c.name, color: c.color, icon: c.icon || '🍔' })
+    setFormError('')
     setModalOpen(true)
   }
 
   function closeModal() {
     setModalOpen(false)
     resetForm()
+    setFormError('')
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name.trim()) return
+    setFormError('')
     const promise = editing
       ? updateCategory(editing.id, form)
       : createCategory(form)
 
-    promise.then(() => { closeModal(); load() })
+    promise
+      .then(() => {
+        closeModal()
+        load()
+      })
+      .catch((err) => {
+        setFormError(err instanceof Error ? err.message : 'Não foi possível salvar.')
+      })
   }
 
   function openDeleteConfirm(c: Category) {
@@ -173,7 +185,10 @@ export default function CategoriesPage() {
                     <EmojiPicker value={form.icon} onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))} />
                     <input
                       value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      onChange={(e) => {
+                        setFormError('')
+                        setForm((f) => ({ ...f, name: e.target.value }))
+                      }}
                       className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface3)] px-3 py-2.5 text-[13px] text-foreground placeholder:text-[var(--text3)] focus:border-[var(--green)] focus:outline-none transition-colors"
                       placeholder="Ex: Alimentação"
                       required
@@ -210,6 +225,12 @@ export default function CategoriesPage() {
                   </div>
                 </div>
               </div>
+
+              {formError && (
+                <div className="mb-4 text-[13px] text-[var(--red)] bg-[var(--red)]/8 border border-[var(--red)]/20 rounded-lg px-3 py-2.5">
+                  {formError}
+                </div>
+              )}
 
               <div className="flex gap-2.5 justify-end">
                 <button
